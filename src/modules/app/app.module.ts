@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, NestModule } from '@nestjs/common';
 import { RedisModule } from '@liaoliaots/nestjs-redis';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
@@ -7,12 +7,11 @@ import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handleba
 
 import V1Module from '@v1/v1.module';
 
-import TradingRepository from '@v1/trading/trading.repository';
-
+import { MiddlewareConsumer } from '@nestjs/common/interfaces/middleware/middleware-consumer.interface';
+import LoggerMiddleware from 'src/middlewares/logger.middleware';
 import AppController from './app.controller';
 import AppService from './app.service';
 import AppGateway from './app.gateway';
-import TradingService from '@v1/trading/trading.service';
 
 @Module({
   imports: [
@@ -63,4 +62,8 @@ import TradingService from '@v1/trading/trading.service';
   controllers: [AppController],
   providers: [AppService, AppGateway],
 })
-export default class AppModule {}
+export default class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(LoggerMiddleware).forRoutes('/');
+  }
+}

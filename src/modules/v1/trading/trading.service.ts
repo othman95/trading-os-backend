@@ -1,6 +1,6 @@
-import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
-import ccxt, { Market } from 'ccxt';
-import talib from 'ta-lib';
+import { HttpException, Injectable, OnApplicationBootstrap } from '@nestjs/common';
+import ccxt, { Dictionary, Market } from 'ccxt';
+import DumpTradeDto from './dto/dumpTrade.dto';
 import TradingRepository from './trading.repository';
 // import talib from 'talib';
 
@@ -14,98 +14,60 @@ export default class TradingService implements OnApplicationBootstrap {
   }
 
   onApplicationBootstrap() {
-    this.dumpMarket();
+    // this.dumpMarket();
   }
 
   dumpMarket = async () => {
-    const symbolData: Market = {
-      id: 'BTC-USD',
-      symbol: 'BTC-USD',
-      base: 'BTC',
-      quote: 'USD',
-      baseId: 'btc',
-      quoteId: 'usd',
-      active: true,
-      type: 'spot',
-      spot: true,
-      margin: false,
-      swap: false,
-      future: false,
-      option: false,
-      contract: false,
-      settle: 'usd',
-      settleId: 'usd',
-      contractSize: 1,
-      linear: false,
-      inverse: false,
-      taker: 0.0025,
-      maker: 0.0015,
-      percentage: false,
-      tierBased: false,
-      feeSide: 'taker',
-      precision: {
-        amount: 8,
-        price: 2,
-      },
-      limits: {
-        amount: { min: 0.01, max: 100 },
-        cost: { min: 1, max: 100000 },
-        leverage: { min: 2, max: 50 },
-        price: { min: 0.01, max: 10000 },
-      },
-      info: {
-        website: 'https://www.bitfinex.com',
-        logo: 'https://bitfinex.com/assets/logos/logo.svg',
-      },
-    };
-    // Get the symbols from the exchange
-    console.log('started dumping market');
-    // const symbols = await this.exchange.loadMarkets();
-    const res = await this.tradingRepository.dumpMarket(symbolData);
-    console.log('finished dumping market');
-    console.log(res);
-    return true;
+    try {
+      const symbolData: Dictionary<Market> = await this.exchange.loadMarkets();
+      const symbols = Object.values(symbolData) as DumpTradeDto[];
+      // Get the symbols from the exchange
+      await this.tradingRepository.empty();
+      return await this.tradingRepository.dumpMarket(symbols);
+    } catch (error) {
+      throw new HttpException('Failed to dump market', 500);
+    }
   };
 
-  loadMarket = async () => {
-    const symbols = await this.tradingRepository.loadMarket();
-    return symbols;
+  getSymbolInfo = async (symbol: string) => {
+    return this.exchange.fetchTicker(symbol);
   };
 
-  // Define a function to get the symbols
   getSymbols = async () => {
-    // Get the symbols from the exchange
-    const symbols = await this.exchange;
-
-    return [];
+    return this.tradingRepository.getSymbols().then((data) => data?.filter(Boolean).map((d) => d.symbol) || []);
   };
+
+  // test = async () => {
+  //   const symbols = await this.tradingRepository.loadAllMarket();
+  //   return symbols;
+  // };
 
   // Import the required libraries
   // Define a function to execute the trend following strategy
-  trendFollowing = async (symbol: any) => {
-    // Get the historical data of the asset
-    const candles = await this.exchange.fetchOHLCV(symbol);
+  // trendFollowing = async (symbol: any) => {
+  //   // Get the historical data of the asset
+  //   const candles = await this.exchange.fetchOHLCV(symbol);
 
-    // Use the TALIB library to calculate the moving average
-    const smaResult = talib.SMA(
-      candles.map((c: any[]) => c[4]),
-      20,
-    );
+  //   // Use the TALIB library to calculate the moving average
+  //   const smaResult = talib.SMA(
+  //     candles.map((c: any[]) => c[4]),
+  //     20,
+  //   );
 
-    // Get the current moving average value
-    const currentMA = smaResult[smaResult.length - 1];
+  //   // Get the current moving average value
+  //   const currentMA = smaResult[smaResult.length - 1];
 
-    // Get the last closing price
-    const lastClose = candles[candles.length - 1][4];
+  //   // Get the last closing price
+  //   const lastClose = candles[candles.length - 1][4];
 
-    // Compare the last close price with the moving average
-    if (lastClose > currentMA) {
-      // If the last close price is above the moving average, open a long position
-      return 'Trend is up, opening a long position';
-    }
-    // If the last close price is below the moving average, open a short position
-    return 'Trend is down, opening a short position';
-  };
+  //   // Compare the last close price with the moving average
+  //   if (lastClose > currentMA) {
+  //     // If the last close price is above the moving average, open a long position
+  //     return 'Trend is up, opening a long position';
+  //   }
+  //   // If the last close price is below the moving average, open a short position
+  //   return 'Trend is down, opening a short position';
+  // };
 
   // Define a function to execute the mean reversion strategy
   // meanReversion = async (exchange, symbol) => {

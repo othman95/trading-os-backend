@@ -1,33 +1,25 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Dictionary, Market as CcxtMarket } from 'ccxt';
 import { Model } from 'mongoose';
-import {
-  Market,
-  MarketDocument,
-  MarketDocumentDic,
-} from './schema/trading.schema';
+import DumpTradeDto from './dto/dumpTrade.dto';
+import { Market } from './schemas/trading.schema';
 
 @Injectable()
 export default class TradingRepository {
   constructor(
-    @InjectModel(Market.name) private TradingModel: Model<MarketDocument>,
+    @InjectModel(Market.name)
+    private readonly TradingModel: Model<Market>,
   ) {}
 
-  public async dumpMarket(symbols: CcxtMarket): Promise<MarketDocument> {
-    const newDump = new this.TradingModel(symbols);
-    newDump.save((err, succ) => {
-      console.log(`dddd====>>${JSON.stringify(err)}`);
-      if (err) {
-        console.log(err);
-      } else {
-        console.log(succ);
-      }
-    });
-    return newDump;
+  public async dumpMarket(symbols: DumpTradeDto[]) {
+    return this.TradingModel.insertMany(symbols);
   }
 
-  public async loadMarket(): Promise<MarketDocument | null> {
-    return this.TradingModel.findOne().exec();
+  public async getSymbols(): Promise<Market[] | null> {
+    return this.TradingModel.find().exec();
+  }
+
+  public async empty(): Promise<any> {
+    return this.TradingModel.deleteMany({}).exec();
   }
 }
